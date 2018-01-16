@@ -62,49 +62,67 @@ UNIF_SEARCH = "/unifSearch.do"
 UNIF_RESULTS = "/unifSearchResults.do"
 
 def findCampSites(args):
-    payload = generatePayload(args['month'], args['year'], args['day_of_week'], args['num_nights'])
+    start_end_dates = generateDates(args)
 
-    content_raw = sendRequest(payload)
-    html = BeautifulSoup(content_raw, 'html.parser')
-    sites = getSiteList(html)
+    for i in range(0, len(start_end_dates)):
+        start_date = start_end_dates[0][i]
+        end_date = start_end_dates[1][i]
+
+        payload = generatePayload(start_date, end_date)
+
+        content_raw = sendRequest(payload)
+        html = BeautifulSoup(content_raw, 'html.parser')
+        sites = getSiteList(html, start_date, end_date)
     return sites
 
-#def getNextDay(date):
-#    date_object = datetime.strptime(date, "%Y-%m-%d")
-#    next_day = date_object + timedelta(days=1)
-#    return datetime.strftime(next_day, "%Y-%m-%d")
+# keep for if start_date and end_date are params
+def getNextDay(date):
+    date_object = datetime.strptime(date, "%Y-%m-%d")
+    next_day = date_object + timedelta(days=1)
+    return datetime.strftime(next_day, "%Y-%m-%d")
 
 def formatDate(date):
-#   date_object = datetime.strptime(date, "%Y-%m-%d")
-    date_formatted = datetime.strftime(date, "%a %b %d %Y")
+    if (type(date) == str):
+        date_object = datetime.strptime(date, "%Y-%m-%d")
+        date_formatted = datetime.strftime(date_object, "%a %b %d %Y")
+    else:
+        date_formatted = datetime.strftime(date, "%a %b %d %Y")
     return date_formatted
 
-def generateDates(month, year, day_of_week):
-    monthWeeks = calendar.Calendar().monthdatescalendar(year, month)
-    dayOfWeek = list(calendar.day_name).index(day_of_week)
+def generateDates(args):
+    if(args['start_date'] and args['end_date']):
+        start_dates = args['start_date']
+        end_dates = args['end_date']
+    else:
+        monthWeeks = calendar.Calendar().monthdatescalendar(args['year'], args['month'])
+        dayOfWeek = list(calendar.day_name).index(args['day_of_week'])
 
-    start_dates = []
+        start_dates = []
+        end_dates = []
+        # create set of start dates for month given day of week (e.g. all Fridays)
+        for i in range(len(monthWeeks)):
+            start_dates.append(monthWeeks[i][dayOfWeek])
+            end_dates.append(monthWeeks[i][dayOfWeek] + timedelta(days=args['num_nights']))
 
-    # create set of start dates for month for given day of week
-    for i in range(len(monthWeeks)):
-        start_dates.append(monthWeeks[i][dayOfWeek])
+    start_end_dates = [start_dates, end_dates]
 
-    return start_dates
+    return start_end_dates
 
-def generatePayload(month, year, day_of_week, num_nights):
+def generatePayload(start_date, end_date):
     payload = copy.copy(PAYLOAD)
 
-    start_dates = generateDates(month, year, day_of_week)
-
-    payload['arrivalDate'] = formatDate(start_dates[1])
-    end_date = start_dates[1] + timedelta(days=num_nights)
+    payload['arrivalDate'] = formatDate(start_date)
     payload['departureDate'] = formatDate(end_date)
 
     return payload
 
-def getSiteList(html):
+def getSiteList(html, start_date, end_date):
     sites = html.findAll('div', {"class": "check_avail_panel"})
     results = []
+
+    start_date_cln = formatDate(start_date)
+    end_date_cln = formatDate(end_date)
+
     for site in sites:
         if site.find('a', {'class': 'book_now'}):
             get_url = site.find('a', {'class': 'book_now'})['href']
@@ -114,7 +132,10 @@ def getSiteList(html):
                 get_params = parse_qs(get_query)
                 siteId = get_params['parkId']
                 if siteId and siteId[0] in PARKS:
-                    results.append("%s, Booking Url: %s" % (PARKS[siteId[0]], BASE_URL + get_url))
+                    results.append("%s, Booking Url: %s&arrivalDate={%s}&departureDate={%s}" % (PARKS[siteId[0]], BASE_URL + get_url, start_date_cln, end_date_cln))
+
+    print('results')
+    print(results)
     return results
 
 def sendRequest(payload):
@@ -133,24 +154,21 @@ def sendRequest(payload):
 # SC updating to make command input a month and day(s) of week so that script can check any weekend of a month for instance
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--month", required=True, type=int, help="Month [MM] with no leading 0s e.g. Jan = 1")
-    parser.add_argument("--year", required=True, type=int, help="Year [YYYY]")
-    parser.add_argument("--day_of_week", required=True, type=str, help="First night of week e.g. Friday")
-    parser.add_argument("--num_nights", type=str, help="Consecitive number of nights desired e.g. 2")
-#    parser.add_argument("--end_date", type=str, help="End date [YYYY-MM-DD]")
+    parser.add_argument("--month", type=int, help="Month [MM] with no leading 0s e.g. Jan = 1")
+    parser.add_argument("--year", type=int, help="Year [YYYY]")
+    parser.add_argument("--day_of_week", type=str, help="First night of week e.g. Friday")
+    parser.add_argument("--num_nights", type=str, help="Consecutive number of nights desired e.g. 2, default = 1")
+    parser.add_argument("--start_date", type=str, help="Start date [YYYY-MM-DD]")
+    parser.add_argument("--end_date", type=str, help="End date [YYYY-MM-DD]")
 
     args = parser.parse_args()
     arg_dict = vars(args)
-    #if 'end_date' not in arg_dict or not arg_dict['end_date']:
-    #    arg_dict['end_date'] = getNextDay(arg_dict['start_date']) #if no end date, use next day from start date
+    if (arg_dict['start_date']) and ('end_date' not in arg_dict or not arg_dict['end_date']):
+        arg_dict['end_date'] = getNextDay(arg_dict['start_date']) # if no end date, use next day from start date
     if 'num_nights' not in arg_dict or not arg_dict['num_nights']:
         arg_dict['num_nights'] = 1 # set to 1 night if no num nights given
 
     sites = findCampSites(arg_dict)
     if sites:
         for site in sites:
-            print site + \
-                "&arrivalDate={}&departureDate={}" \
-                .format(
-                        urllib.quote_plus(formatDate(arg_dict['start_date'])),
-                        urllib.quote_plus(formatDate(arg_dict['end_date'])))
+            print site
