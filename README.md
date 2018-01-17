@@ -16,7 +16,14 @@ Install requirements:
 ```
 pip install -r requirements.txt
 ```
-Use: `python campsites.py --start_date 2015-04-24 --end_date 2015-04-25`
+
+Two ways to use:
+* search based on a start and end date. if no end date is provided then search for one night or end date = start date + 1 day
+e.g find me a campsite for dates 2015-04-24 to 2015-04-25
+Command: `python campsites.py --start_date 2015-04-24 --end_date 2015-04-25`
+* search within a given month using a starting day  of week and specify the number of consecutive nights. if no number of nights is provided then search for one night or num_nights = 1
+e.g. find me a campsite for any Friday and Saturday night in April 2015
+Command: `python campsites.py --month 4 --year 2015 --day_of_week 'Friday' --num_nights 2`
 
 Best use is to set a crontab on a ~5 minute interval (I've found that a 10-minute interval is too long because the campsites will be taken by the time I'm able to act on the alert).
 
@@ -36,5 +43,3 @@ Best use is to set a crontab on a ~5 minute interval (I've found that a 10-minut
 * From the list of campgrounds and attractions listed in the results for your park, choose the campgrounds you'd like to stay at
 * For each campground you choose, copy the campground's link URL
 * Grab the parkId URL param and add it as a key to the PARKS dict in `campsites.py`, the value should be a human readable campground name.
-
-

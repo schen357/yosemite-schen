@@ -64,7 +64,7 @@ UNIF_RESULTS = "/unifSearchResults.do"
 def findCampSites(args):
     start_end_dates = generateDates(args)
 
-    for i in range(0, len(start_end_dates)):
+    for i in range(0, len(start_end_dates)-1):
         start_date = start_end_dates[0][i]
         end_date = start_end_dates[1][i]
 
@@ -90,10 +90,10 @@ def formatDate(date):
     return date_formatted
 
 def generateDates(args):
-    if(args['start_date'] and args['end_date']):
-        start_dates = args['start_date']
-        end_dates = args['end_date']
-    else:
+    if args['start_date']:
+        start_dates = [args['start_date']]
+        end_dates = [args['end_date']]
+    elif args['year'] and args['month'] and args['day_of_week']:
         monthWeeks = calendar.Calendar().monthdatescalendar(args['year'], args['month'])
         dayOfWeek = list(calendar.day_name).index(args['day_of_week'])
 
@@ -101,8 +101,9 @@ def generateDates(args):
         end_dates = []
         # create set of start dates for month given day of week (e.g. all Fridays)
         for i in range(len(monthWeeks)):
-            start_dates.append(monthWeeks[i][dayOfWeek])
-            end_dates.append(monthWeeks[i][dayOfWeek] + timedelta(days=args['num_nights']))
+            if monthWeeks[i][dayOfWeek] > datetime.today().date():
+                start_dates.append(monthWeeks[i][dayOfWeek])
+                end_dates.append(monthWeeks[i][dayOfWeek] + timedelta(days=args['num_nights']))
 
     start_end_dates = [start_dates, end_dates]
 
