@@ -132,10 +132,7 @@ def getSiteList(html, start_date, end_date):
                 get_params = parse_qs(get_query)
                 siteId = get_params['parkId']
                 if siteId and siteId[0] in PARKS:
-                    results.append("%s, Booking Url: %s&arrivalDate={%s}&departureDate={%s}" % (PARKS[siteId[0]], BASE_URL + get_url, start_date_cln, end_date_cln))
-
-    print('results')
-    print(results)
+                    results.append("%s, Booking Url: %s&arrivalDate=%s&departureDate=%s" % (PARKS[siteId[0]], BASE_URL + get_url, start_date_cln, end_date_cln))
     return results
 
 def sendRequest(payload):
@@ -157,7 +154,7 @@ if __name__ == "__main__":
     parser.add_argument("--month", type=int, help="Month [MM] with no leading 0s e.g. Jan = 1")
     parser.add_argument("--year", type=int, help="Year [YYYY]")
     parser.add_argument("--day_of_week", type=str, help="First night of week e.g. Friday")
-    parser.add_argument("--num_nights", type=str, help="Consecutive number of nights desired e.g. 2, default = 1")
+    parser.add_argument("--num_nights", type=int, help="Consecutive number of nights desired e.g. 2, default = 1")
     parser.add_argument("--start_date", type=str, help="Start date [YYYY-MM-DD]")
     parser.add_argument("--end_date", type=str, help="End date [YYYY-MM-DD]")
 
